@@ -9,6 +9,7 @@ from psycopg2 import connect, sql
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from DatabaseAdapter import connectHost, connectDB
 
+
 class Database(object):    
     def __init__(self):
         self.user = config.DATABASE['user']
@@ -53,8 +54,6 @@ class Database(object):
         from InputTextContextIdentifier import InputTextContextIdentifier
         from InputTextKeywords import InputTextKeywords
 
-
-        
         # declare variables for all database table classes
         self.context = Context()
         self.document = Document()
@@ -76,7 +75,6 @@ class Database(object):
         self.inputTextWordPosition = InputTextWordPosition()        
         self.inputTextContextIdentifier = InputTextContextIdentifier()
         self.inputTextKeywords = InputTextKeywords()
-        
 
         # create list of database table classes
         self.databaseTableList = [self.context , 
@@ -113,8 +111,7 @@ class Database(object):
 #        
 #        # udate data in tables
 #        self.updateTables()
-        
-            
+
     def exists(self):
         
         """
@@ -127,8 +124,7 @@ class Database(object):
         fetch_exists = cur.fetchone()
         cur.close() 
         return fetch_exists[0]
-        
-        
+
     def create(self):
         
         # drop database (if database exists)
@@ -165,8 +161,7 @@ class Database(object):
             self.createTriggerFunctions(self.databaseTableList)
             
             # (4) insert data into tables
-            self.updateTables()
-            
+            # self.updateTables()
 
     def createTables(self, databaseTableList):
         
@@ -193,8 +188,6 @@ class Database(object):
                 newTable = "_".join(databaseTable.tableName.split("_")[0:-1])
                 databaseTable.Table.copy(templateTable, newTable, noData = True)
 
-                    
-            
     def createTriggerFunctions(self, databaseTableList):
         
         for databaseTable in databaseTableList:
@@ -223,8 +216,7 @@ class Database(object):
 
                 finally:
                     cur.close()
-          
-        
+
     def updateTables(self):
         
         """
@@ -237,79 +229,8 @@ class Database(object):
         * Note that --document phrase-- is updated indirectly via the Document class
         
         """
-
-        import os
-        import collections
-        
-        class OrderedSet(collections.Set):
-            def __init__(self, iterable=()):
-                self.d = collections.OrderedDict.fromkeys(iterable)
-            def __len__(self):
-                return len(self.d)
-            def __contains__(self, element):
-                return element in self.d
-            def __iter__(self):
-                return iter(self.d)
-       
-            
-        root = "Test"
-        
-        # (1) context table: insert/update/delete
-        if self.context.Table.exists():
-        
-            # root = next(os.walk(os.getcwd()))[1][0] # root = "Test"            
-            
-            allContextPaths = []
-            
-            for dirpath, dirnames, filenames in os.walk(root):
-                
-                if dirnames:
-                    
-                    for contextName in dirnames:
-                        
-                        allContextPaths.append(os.path.join(dirpath, contextName))
-                        
-            tableContextPaths = self.context.Table.selectColumn("context_path")
-            
-            newContextPaths = list(OrderedSet(allContextPaths) - OrderedSet(tableContextPaths))
-            oldContextPaths = list(OrderedSet(tableContextPaths) - OrderedSet(allContextPaths))
-            
-            if newContextPaths:
-                for newContextPath in newContextPaths:
-                    self.context.addRecord(newContextPath, self.connectDB)
-                    
-            if oldContextPaths:
-                for oldContextPath in oldContextPaths:
-                    self.context.deleteRecord(oldContextPath, self.connectDB) 
-            
-        # (2/3) document table: insert/update/delete
-        if self.document.Table.exists():
-
-            allDocumentPaths = []
-            
-            for dirpath, dirnames, filenames in os.walk(root):
-                
-                for documentTitle in filenames:
-         
-                    if documentTitle.endswith(".txt"):
-                    
-                        allDocumentPaths.append(os.path.join(dirpath, documentTitle))
-
-            tableDocumentPaths = self.document.Table.selectColumn("document_path")
-    
-            newDocumentPaths = list(OrderedSet(allDocumentPaths) - OrderedSet(tableDocumentPaths))
-            oldDocumentPaths = list(OrderedSet(tableDocumentPaths) - OrderedSet(allDocumentPaths))
-            
-            if newDocumentPaths:
-                for newDocumentPath in newDocumentPaths:
-                    self.document.addRecord(newDocumentPath, self.connectDB)
-                        
-            if oldDocumentPaths:
-                for oldDocumentPath in oldDocumentPaths:
-                    self.document.deleteRecord(oldDocumentPath, self.connectDB)
-                    
         cur = self.connectDB.connection.cursor()
-        try:    
+        try:
             strSQL = sql.SQL(''' TRUNCATE context CASCADE;
                                  INSERT INTO context SELECT * FROM context_temp ORDER BY context_id;
                                  TRUNCATE document CASCADE;

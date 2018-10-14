@@ -8,11 +8,17 @@ Created on Wednesday August 1, 2018
 """
 import os
 import config
+import time
 from DatabaseAdapter import connectHost, connectDB
 
 from contextionaryDatabase import Database
 import collections
+from Context import Context
+from Document import Document
+import multiprocessing
 from multiprocessing import Process
+from threading import Thread
+from queue import Queue, Empty
 
 
 class OrderedSet(collections.Set):
@@ -29,6 +35,8 @@ class OrderedSet(collections.Set):
         return iter(self.d)
 
 
+start_time = time.time()
+
 connectHost().dropDB()
 
 db = Database()
@@ -38,13 +46,36 @@ db = Database()
 # create database only once
 db.create()
 
+newContextPaths = []
+oldContextPaths = []
+newDocumentPaths = []
+oldDocumentPaths = []
+
+context = Context()
+document = Document()
+connectDB = connectDB()
+
+
+def add_context_process(context_path, connection):
+    context.addRecord(context_path, connection)
+
+
+def delete_context_process(context_path, connection):
+    context.deleteRecord(context_path, connection)
+
+
+def add_document_process(doc_path, connection):
+    document.addRecord(doc_path, connection)
+
+
+def delete_document_process(doc_path, connection):
+    document.deleteRecord(doc_path, connection)
+
+
 root = "Test"
 
 # (1) context table: insert/update/delete
 if db.context.Table.exists():
-
-    # root = next(os.walk(os.getcwd()))[1][0] # root = "Test"
-
     allContextPaths = []
 
     for dirpath, dirnames, filenames in os.walk(root):
@@ -59,15 +90,8 @@ if db.context.Table.exists():
     newContextPaths = list(OrderedSet(allContextPaths) - OrderedSet(tableContextPaths))
     oldContextPaths = list(OrderedSet(tableContextPaths) - OrderedSet(allContextPaths))
 
-    if newContextPaths:
-        for newContextPath in newContextPaths:
-            db.context.addRecord(newContextPath, db.connectDB)
 
-    if oldContextPaths:
-        for oldContextPath in oldContextPaths:
-            db.context.deleteRecord(oldContextPath, db.connectDB)
-
-            # (2/3) document table: insert/update/delete
+# (2/3) document table: insert/update/delete
 if db.document.Table.exists():
 
     allDocumentPaths = []
@@ -84,18 +108,81 @@ if db.document.Table.exists():
     newDocumentPaths = list(OrderedSet(allDocumentPaths) - OrderedSet(tableDocumentPaths))
     oldDocumentPaths = list(OrderedSet(tableDocumentPaths) - OrderedSet(allDocumentPaths))
 
-    if newDocumentPaths:
-        for newDocumentPath in newDocumentPaths:
-            db.document.addRecord(newDocumentPath, db.connectDB)
 
-    if oldDocumentPaths:
-        for oldDocumentPath in oldDocumentPaths:
-            db.document.deleteRecord(oldDocumentPath, db.connectDB)
+class AddDocumentThread(Thread):
+    def __init__(self, queue, connection):
+        Thread.__init__(self)
+        self.queue = queue
+        self.connection = connection
 
+    def run(self):
+        while True:
+            try:
+                context_path = self.queue.get_nowait()
+                add_document_process(context_path, self.connection)
+            except Empty:
+                break
+
+
+class DeleteDocumentThread(Thread):
+    def __init__(self, queue, connection):
+        Thread.__init__(self)
+        self.queue = queue
+        self.connection = connection
+
+    def run(self):
+        while True:
+            try:
+                document_path = self.queue.get(False)
+                delete_document_process(document_path, self.connection)
+            except Empty:
+                break
+
+
+if __name__ == '__main__':
+    if context.Table.exists():
+        if newContextPaths:
+            for newContextPath in newContextPaths:
+                add_context_process(newContextPath, connectDB)
+
+        if oldContextPaths:
+            for oldContextPath in oldContextPaths:
+                delete_context_process(oldContextPath, connectDB)
+
+    if document.Table.exists():
+        if newDocumentPaths:
+            q = Queue()
+            for newDocumentPath in newDocumentPaths:
+                q.put(newDocumentPath)
+
+            new_threads = []
+            for i in range(multiprocessing.cpu_count()):
+                t = AddDocumentThread(q, connectDB)
+                t.start()
+
+                t.join()
+
+        if oldDocumentPaths:
+            q = Queue()
+            for oldDocumentPath in oldDocumentPaths:
+                q.put(oldDocumentPath)
+
+            new_threads = []
+            for i in range(multiprocessing.cpu_count()):
+                t = DeleteDocumentThread(q, connectDB)
+                t.start()
+
+                t.join()
 
 # input text unlimited number of times
 db.readingComprehensionAssistant("I have some knowledge in mathematics.")
 db.readingComprehensionAssistant("I love science, especially mathematics and statistics")
+
+db.updateTables()
+
+end_time = time.time()
+print("Done")
+print("Execution Time: ", str(end_time-start_time))
 
 
 ### phraseMaxLength
@@ -124,14 +211,3 @@ db.readingComprehensionAssistant("I love science, especially mathematics and sta
 
 ### contextWeightRankThreshold
 # sets the maximum rank for inclusion in input_text_context_identifier table based on context_weight
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
- 

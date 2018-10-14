@@ -45,7 +45,6 @@ class Document(object):
         """
         Adds record to document table and phrase origin table
         """
-        print("document add start...", documentPath)
         
         context = Context()
         phraseOrigin = PhraseOrigin()
@@ -85,7 +84,6 @@ class Document(object):
             for phraseDict in phraseDictList:
                 for key, val in phraseDict.items():
                     phraseOrigin.addRecord(documentID[0], key, val, connectDB)
-        print("document add end...", documentPath)
 
     def deleteRecord(self, documentPath, connectDB):
         
