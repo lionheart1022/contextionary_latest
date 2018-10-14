@@ -7,7 +7,7 @@ DATABASE = {
 
 PARSE = {
   'rootDirectory' : "Test",
-  'phraseMaxLength': 2,
+  'phraseMaxLength': 5,
   'minPhraseCount' : 2,
   'percentileThreshold': 0.2,
   'crossPresenceThreshold': 0.50,

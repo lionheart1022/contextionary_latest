@@ -118,8 +118,8 @@ class AddDocumentThread(Thread):
     def run(self):
         while True:
             try:
-                context_path = self.queue.get_nowait()
-                add_document_process(context_path, self.connection)
+                document_path = self.queue.get_nowait()
+                add_document_process(document_path, self.connection)
             except Empty:
                 break
 
@@ -159,8 +159,10 @@ if __name__ == '__main__':
             for i in range(multiprocessing.cpu_count()):
                 t = AddDocumentThread(q, connectDB)
                 t.start()
+                new_threads.append(t)
 
-                t.join()
+            for thread in new_threads:
+                thread.join()
 
         if oldDocumentPaths:
             q = Queue()
@@ -171,8 +173,10 @@ if __name__ == '__main__':
             for i in range(multiprocessing.cpu_count()):
                 t = DeleteDocumentThread(q, connectDB)
                 t.start()
+                new_threads.append(t)
 
-                t.join()
+            for thread in new_threads:
+                thread.join()
 
 # input text unlimited number of times
 db.readingComprehensionAssistant("I have some knowledge in mathematics.")
