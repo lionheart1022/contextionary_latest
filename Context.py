@@ -52,13 +52,13 @@ class Context(object):
         # create table
         self.Table = Table(self.tableName)
 
-
     def addRecord(self, contextPath, connectDB):
         
         """
         Adds record to context table
         """
-        
+        print("context add start...", contextPath)
+
         nonPrimeAttributes = [x for x in list(self.defaultColumns.keys()) if x not in self.defaultPrimaryKeys]
 
         if 'Linux' in platform.platform():
@@ -107,7 +107,7 @@ class Context(object):
         # update context picture in --context-- table
         contextPicture = self.generateContextPicture(contextPath)
         self.updateContextProperty(contextPath, {"context_picture": contextPicture}, connectDB)
-
+        print("context add end...", contextPath)
 
     def deleteRecord(self, contextPath, connectDB):
         

@@ -11,6 +11,23 @@ import config
 from DatabaseAdapter import connectHost, connectDB
 
 from contextionaryDatabase import Database
+import collections
+from multiprocessing import Process
+
+
+class OrderedSet(collections.Set):
+    def __init__(self, iterable=()):
+        self.d = collections.OrderedDict.fromkeys(iterable)
+
+    def __len__(self):
+        return len(self.d)
+
+    def __contains__(self, element):
+        return element in self.d
+
+    def __iter__(self):
+        return iter(self.d)
+
 
 connectHost().dropDB()
 
@@ -20,6 +37,61 @@ db = Database()
 
 # create database only once
 db.create()
+
+root = "Test"
+
+# (1) context table: insert/update/delete
+if db.context.Table.exists():
+
+    # root = next(os.walk(os.getcwd()))[1][0] # root = "Test"
+
+    allContextPaths = []
+
+    for dirpath, dirnames, filenames in os.walk(root):
+
+        if dirnames:
+
+            for contextName in dirnames:
+                allContextPaths.append(os.path.join(dirpath, contextName))
+
+    tableContextPaths = db.context.Table.selectColumn("context_path")
+
+    newContextPaths = list(OrderedSet(allContextPaths) - OrderedSet(tableContextPaths))
+    oldContextPaths = list(OrderedSet(tableContextPaths) - OrderedSet(allContextPaths))
+
+    if newContextPaths:
+        for newContextPath in newContextPaths:
+            db.context.addRecord(newContextPath, db.connectDB)
+
+    if oldContextPaths:
+        for oldContextPath in oldContextPaths:
+            db.context.deleteRecord(oldContextPath, db.connectDB)
+
+            # (2/3) document table: insert/update/delete
+if db.document.Table.exists():
+
+    allDocumentPaths = []
+
+    for dirpath, dirnames, filenames in os.walk(root):
+
+        for documentTitle in filenames:
+
+            if documentTitle.endswith(".txt"):
+                allDocumentPaths.append(os.path.join(dirpath, documentTitle))
+
+    tableDocumentPaths = db.document.Table.selectColumn("document_path")
+
+    newDocumentPaths = list(OrderedSet(allDocumentPaths) - OrderedSet(tableDocumentPaths))
+    oldDocumentPaths = list(OrderedSet(tableDocumentPaths) - OrderedSet(allDocumentPaths))
+
+    if newDocumentPaths:
+        for newDocumentPath in newDocumentPaths:
+            db.document.addRecord(newDocumentPath, db.connectDB)
+
+    if oldDocumentPaths:
+        for oldDocumentPath in oldDocumentPaths:
+            db.document.deleteRecord(oldDocumentPath, db.connectDB)
+
 
 # input text unlimited number of times
 db.readingComprehensionAssistant("I have some knowledge in mathematics.")

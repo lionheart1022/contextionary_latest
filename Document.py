@@ -14,9 +14,9 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from collections import Counter
 from nltk.tokenize import sent_tokenize, word_tokenize
 
+
 class Document(object):
-    
-    
+
     def __init__(self, tableName = "document", copy = True):
         
         from contextionaryDatabase import Table
@@ -29,7 +29,6 @@ class Document(object):
             
         context = Context()
 
-
         self.defaultColumns = {"document_id": "serial",
                                "document_title": "varchar(255)",
                                "context_id": "bigint",
@@ -41,12 +40,12 @@ class Document(object):
         self.getTriggerFunction = None
         self.Table = Table(self.tableName)
 
-
     def addRecord(self, documentPath, connectDB):
         
         """
         Adds record to document table and phrase origin table
         """
+        print("document add start...", documentPath)
         
         context = Context()
         phraseOrigin = PhraseOrigin()
@@ -77,8 +76,7 @@ class Document(object):
             cur.execute(strSQL1.format(sql.Identifier(self.tableName), strSQL2, strSQL3), ([documentTitle, contextID, documentContent, documentPath]))
         finally:
             cur.close()
-            
-        
+
         documentID = self.Table.selectColumn("document_id", {"document_path": [documentPath]})
         
         if phraseOrigin.Table.exists():
@@ -87,9 +85,9 @@ class Document(object):
             for phraseDict in phraseDictList:
                 for key, val in phraseDict.items():
                     phraseOrigin.addRecord(documentID[0], key, val, connectDB)
-            
+        print("document add end...", documentPath)
 
-    def deleteRecord(self, documentPath):
+    def deleteRecord(self, documentPath, connectDB):
         
         """
         Deletes record from document table
@@ -100,7 +98,8 @@ class Document(object):
             cur.execute(strSQL.format(sql.Identifier(self.tableName)), ([documentPath]))
         finally:
             cur.close()
-            
+
+
 class TextProcessor(object):
 
     def __init__(self, documentContent, phraseMaxLength):
