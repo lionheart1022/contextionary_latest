@@ -52,7 +52,7 @@ def display(text):
                                            "keyword_text": keyword[4], "phrase_id": keyword[5]}
                                           for keyword in result_keyword],
                   'input_text_context_identifier': [{"input_text_id": identifier[0], "context_id": identifier[1],
-                                                     "context_weight": identifier[2]}
+                                                     "context_weight": int(identifier[2])}
                                                     for identifier in result_identifier]}
 
         return jsonify(result)
