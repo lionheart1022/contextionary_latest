@@ -15,7 +15,8 @@ def index():
     """
     index endpoint
     """
-    return 'Please go to api endpoint to read text. When you input text, you have to replace space with _'
+    return 'Please go to api endpoint to read text. ' \
+           'When you input text in endpoint, you have to replace space with _.'
 
 
 @app.route('/<text>', methods=['GET'])
@@ -23,7 +24,7 @@ def display(text):
     if '_' in text:
         text = text.replace('_', ' ')
 
-    db.readingComprehensionAssistant(text)
+    db.inputText.addRecord(text, connectDB)
 
     cur = connectDB.connection.cursor()
 
