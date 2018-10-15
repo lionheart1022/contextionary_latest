@@ -122,6 +122,7 @@ class AddDocumentThread(Thread):
                 add_document_process(document_path, self.connection)
             except Empty:
                 break
+        return
 
 
 class DeleteDocumentThread(Thread):
@@ -133,10 +134,11 @@ class DeleteDocumentThread(Thread):
     def run(self):
         while True:
             try:
-                document_path = self.queue.get(False)
+                document_path = self.queue.get_nowait()
                 delete_document_process(document_path, self.connection)
             except Empty:
                 break
+        return
 
 
 if __name__ == '__main__':
